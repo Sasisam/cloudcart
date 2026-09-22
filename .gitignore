@@ -1,0 +1,30 @@
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / Secrets
+.env
+*.pem
+*.ppk
+
+# Temporary files
+*.tmp
+*.swp
