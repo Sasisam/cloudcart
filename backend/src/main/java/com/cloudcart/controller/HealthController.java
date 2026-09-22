@@ -15,4 +15,8 @@ public class HealthController {
     public String health() {
         return "UP";
     }
+    @GetMapping("/version")
+    public String version() {
+    	return "CloudCart v1.0.0";
+	}
 }
