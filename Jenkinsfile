@@ -6,6 +6,12 @@ pipeline {
         maven 'Maven3'
     }
 
+    environment {
+        AWS_REGION = 'eu-west-3'
+        ECR_REPO   = 'cloudcart'
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -52,15 +58,74 @@ pipeline {
                 }
             }
         }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build \
+                      -t $ECR_REPO:$IMAGE_TAG \
+                      ./backend
+                '''
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                sh '''
+                    AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                        --query Account \
+                        --output text)
+
+                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+                    aws ecr get-login-password \
+                        --region $AWS_REGION | \
+                    docker login \
+                        --username AWS \
+                        --password-stdin $ECR_REGISTRY
+                '''
+            }
+        }
+
+        stage('Tag Image') {
+            steps {
+                sh '''
+                    AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                        --query Account \
+                        --output text)
+
+                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+                    docker tag \
+                        $ECR_REPO:$IMAGE_TAG \
+                        $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+                sh '''
+                    AWS_ACCOUNT_ID=$(aws sts get-caller-identity \
+                        --query Account \
+                        --output text)
+
+                    ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+                    docker push \
+                        $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                '''
+            }
+        }
     }
 
     post {
         success {
-            echo 'CloudCart CI Pipeline completed successfully!'
+            echo 'CloudCart CI/CD Pipeline completed successfully!'
         }
 
         failure {
-            echo 'CloudCart CI Pipeline failed. Check the Jenkins console output.'
+            echo 'CloudCart Pipeline failed. Check Jenkins Console Output.'
         }
     }
 }
